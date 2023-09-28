@@ -1,4 +1,4 @@
-package com.example.rp;
+package com.example.duduhgee;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -15,6 +15,7 @@ import com.android.volley.toolbox.Volley;
 import com.example.duduhgee.BiometricActivity;
 import com.example.duduhgee.MainActivity;
 import com.example.duduhgee.R;
+import com.example.rp.RP_PaymentDetailRequest;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -26,7 +27,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 
-public class RP_PayDetailActivity extends AppCompatActivity {
+public class PayDetailActivity extends AppCompatActivity {
 
     private Button btn_info;
     private Button btn_home;
@@ -63,7 +64,7 @@ public class RP_PayDetailActivity extends AppCompatActivity {
                 Intent intent = getIntent();
                 String userID = intent.getStringExtra("userID");
 
-                intent = new Intent(RP_PayDetailActivity.this, BiometricActivity.class);
+                intent = new Intent(PayDetailActivity.this, BiometricActivity.class);
                 intent.putExtra("userID", userID);
                 startActivity(intent);
             }
@@ -75,7 +76,7 @@ public class RP_PayDetailActivity extends AppCompatActivity {
                 Intent intent = getIntent();
                 String userID = intent.getStringExtra("userID");
                 // 메인 액티비티로 이동하는 인텐트 생성
-                intent = new Intent(RP_PayDetailActivity.this, MainActivity.class);
+                intent = new Intent(PayDetailActivity.this, MainActivity.class);
                 intent.putExtra("userID", userID);
                 startActivity(intent);
                 finish(); // 현재 액티비티를 종료하여 이전 액티비티로 돌아갈 수 있도록 함
@@ -117,7 +118,7 @@ public class RP_PayDetailActivity extends AppCompatActivity {
         };
         RP_PaymentDetailRequest paymentDetailRequest = null;
         try {
-            paymentDetailRequest = new RP_PaymentDetailRequest(userId,responseListner, RP_PayDetailActivity.this);
+            paymentDetailRequest = new RP_PaymentDetailRequest(userId,responseListner, PayDetailActivity.this);
         } catch (CertificateException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
@@ -129,7 +130,7 @@ public class RP_PayDetailActivity extends AppCompatActivity {
         } catch (KeyManagementException e) {
             throw new RuntimeException(e);
         }
-        RequestQueue queue = Volley.newRequestQueue(RP_PayDetailActivity.this);
+        RequestQueue queue = Volley.newRequestQueue(PayDetailActivity.this);
         queue.add(paymentDetailRequest);
 
 
@@ -140,7 +141,7 @@ public class RP_PayDetailActivity extends AppCompatActivity {
                 Intent intent = getIntent();
                 String userID = intent.getStringExtra("userID");
                 // PayDetail 액티비티로 이동하는 인텐트 생성
-                intent = new Intent(RP_PayDetailActivity.this, RP_PayDetailActivity.class);
+                intent = new Intent(PayDetailActivity.this, PayDetailActivity.class);
                 intent.putExtra("userID", userID);
                 startActivity(intent);
             }
@@ -153,7 +154,7 @@ public class RP_PayDetailActivity extends AppCompatActivity {
                 Intent intent = getIntent();
                 String userID = intent.getStringExtra("userID");
                 // MyInfo 액티비티로 이동하는 인텐트 생성
-                intent = new Intent(RP_PayDetailActivity.this, BiometricActivity.class);
+                intent = new Intent(PayDetailActivity.this, BiometricActivity.class);
                 intent.putExtra("userID", userID);
                 startActivity(intent);
             }

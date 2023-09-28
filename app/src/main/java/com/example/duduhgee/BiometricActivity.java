@@ -31,7 +31,7 @@ import com.example.asm.ASM_checkKeyPairExistence;
 import com.example.rp.RP_DeleteAccountRequest;
 import com.example.rp.RP_DeleteRequest;
 import com.example.rp.RP_FIDORegisterRequest;
-import com.example.rp.RP_PayDetailActivity;
+import com.example.duduhgee.PayDetailActivity;
 import com.example.rp.RP_PaymentDetailRequest;
 import com.example.rp.RP_SavePKRequest;
 
@@ -103,7 +103,7 @@ public class BiometricActivity extends AppCompatActivity {
                 Intent intent = getIntent();
                 String userID = intent.getStringExtra("userID");
                 // PayDetail 액티비티로 이동하는 인텐트 생성
-                intent = new Intent(BiometricActivity.this, RP_PayDetailActivity.class);
+                intent = new Intent(BiometricActivity.this, PayDetailActivity.class);
                 intent.putExtra("userID", userID);
                 startActivity(intent);
             }

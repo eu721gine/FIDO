@@ -16,15 +16,18 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
+import com.android.volley.VolleyError;
 import com.android.volley.toolbox.Volley;
 import com.example.asm.ASM_SignatureActivity;
 import com.example.duduhgee.R;
 import com.example.rp.RP_BuyRequest;
+import com.example.rp.RP_CheckCardRegistrationRequest;
 import com.example.rp.RP_SavePaymentRequest;
 import com.example.rp.RP_VerifyRequest;
 
@@ -44,13 +47,12 @@ import java.security.cert.CertificateException;
 public class Buy2Activity extends AppCompatActivity {
 
     private Button btn_buy;
-    //private static final String KEY_NAME = userID;
     private KeyStore keyStore;
     private PrivateKey privateKey;
     private PublicKey publicKey;
     private BiometricPrompt.AuthenticationCallback authenticationCallback;
     private CancellationSignal cancellationSignal = null;
-    private static final String TAG = Buy2Activity.class.getSimpleName();
+    private static final String TAG = BuyActivity.class.getSimpleName();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,84 +74,14 @@ public class Buy2Activity extends AppCompatActivity {
                     public void onResponse(String response) {
                         try {
                             JSONObject jsonObject = new JSONObject(response);
+                            boolean isCardRegistered = jsonObject.getBoolean("isCardRegistered");
 
-                            if (jsonObject.has("Challenge")) {
-                                String header = jsonObject.getString("Header");
-                                String username = jsonObject.getString("Username");
-                                String challenge = jsonObject.getString("Challenge");
-                                String policy = jsonObject.getString("Policy");
-                                String transaction = jsonObject.getString("Transaction");
-
-                                Log.d(TAG,"Header: "+header);
-                                Log.d(TAG,"Username: "+username);
-                                Log.d(TAG,"Challenge: "+challenge);
-                                Log.d(TAG,"Policy: "+policy);
-                                Log.d(TAG, "Transaction: " + transaction);
-
-                                JSONObject sn = new JSONObject();
-                                sn.put("challenge", challenge);
-                                sn.put("transaction", transaction);
-                                String snString = sn.toString();
-                                Log.d(TAG, "snString: " + snString);
-
-                                authenticationCallback = new BiometricPrompt.AuthenticationCallback() {
-                                    @Override
-                                    public void onAuthenticationFailed() {
-                                        super.onAuthenticationFailed();
-                                        notifyUser("Authentication Failed");
-                                    }
-
-                                    @Override
-                                    public void onAuthenticationError(int errorCode, CharSequence errString) {
-                                        super.onAuthenticationError(errorCode, errString);
-                                        notifyUser("Authentication Error: " + errString);
-                                    }
-
-                                    @Override
-                                    public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
-                                        super.onAuthenticationSucceeded(result);
-                                        notifyUser("인증에 성공하였습니다");
-
-                                        ASM_SignatureActivity signatureActivity = new ASM_SignatureActivity();
-                                        byte[] signedChallenge = signatureActivity.signChallenge(snString, userID);
-
-                                        if (signedChallenge != null) {
-                                            // Method invocation was successful
-                                            Log.d(TAG, "Signed Challenge: " + Base64.encodeToString(signedChallenge, Base64.NO_WRAP));
-
-                                        } else {
-                                            // Method invocation failed
-                                            Log.e(TAG, "Failed to sign the challenge");
-                                        }
-
-                                        try {
-                                            verifySignature(signedChallenge, snString, userID); // userID에 실제 사용자의 ID를 전달해야 함
-                                        } catch (KeyStoreException | CertificateException |
-                                                 IOException | NoSuchAlgorithmException |
-                                                 UnrecoverableEntryException |
-                                                 KeyManagementException e) {
-                                            throw new RuntimeException(e);
-                                        }
-
-                                    }
-                                };
-                                if (checkBiometricSupport()) {
-                                    BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(Buy2Activity.this)
-                                            .setTitle("지문 인증을 시작합니다")
-                                            .setSubtitle("지문 인증 시작")
-                                            .setDescription("지문")
-                                            .setNegativeButton("Cancel", getMainExecutor(), new DialogInterface.OnClickListener() {
-                                                @Override
-                                                public void onClick(DialogInterface dialogInterface, int i) {
-                                                    notifyUser("Authentication Cancelled");
-                                                }
-                                            }).build();
-
-                                    biometricPrompt.authenticate(getCancellationSignal(), getMainExecutor(), authenticationCallback);
-                                }
-
+                            if (isCardRegistered) {
+                                // 카드 등록되어 있으면 물건 구매하기
+                                startPurchase(userID);
                             } else {
-                                Log.e(TAG, "Header not found in JSON response");
+                                // 카드 등록이 되어있지 않으면 alert 창 띄우기
+                                showCardRegistrationDialog();
                             }
                         } catch (JSONException e) {
                             Toast.makeText(getApplicationContext(), "오류가 발생하였습니다. ", Toast.LENGTH_SHORT).show();
@@ -157,17 +89,128 @@ public class Buy2Activity extends AppCompatActivity {
                         }
                     }
                 };
-                RP_BuyRequest buyRequest = null;
-                try {
-                    buyRequest = new RP_BuyRequest(userID, "1", responseListener, Buy2Activity.this);
-                } catch (CertificateException | NoSuchAlgorithmException | KeyManagementException |
-                         IOException | KeyStoreException e) {
-                    throw new RuntimeException(e);
-                }
+
+                Response.ErrorListener errorListener = new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // 오류 처리
+                    }
+                };
+
+                RP_CheckCardRegistrationRequest checkCardRequest = new RP_CheckCardRegistrationRequest(userID, responseListener, errorListener);
                 RequestQueue queue = Volley.newRequestQueue(Buy2Activity.this);
-                queue.add(buyRequest);
+                queue.add(checkCardRequest);
             }
         });
+    }
+
+    private void startPurchase(String userID) {
+        Response.Listener<String> responseListener = new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+
+                    if (jsonObject.has("Challenge")) {
+                        String username = jsonObject.getString("Username");
+                        String challenge = jsonObject.getString("Challenge");
+                        String policy = jsonObject.getString("Policy");
+                        String transaction = jsonObject.getString("Transaction");
+
+                        Log.d(TAG,"Username: "+username);
+                        Log.d(TAG,"Challenge: "+challenge);
+                        Log.d(TAG,"Policy: "+policy);
+                        Log.d(TAG, "Transaction: " + transaction);
+
+                        JSONObject sn = new JSONObject();
+                        sn.put("challenge", challenge);
+                        sn.put("transaction", transaction);
+                        String snString = sn.toString();
+                        Log.d(TAG, "snString: " + snString);
+
+                        authenticationCallback = new BiometricPrompt.AuthenticationCallback() {
+                            @Override
+                            public void onAuthenticationFailed() {
+                                super.onAuthenticationFailed();
+                                notifyUser("Authentication Failed");
+                            }
+
+                            @Override
+                            public void onAuthenticationError(int errorCode, CharSequence errString) {
+                                super.onAuthenticationError(errorCode, errString);
+                                notifyUser("Authentication Error: " + errString);
+                            }
+
+                            @Override
+                            public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                                super.onAuthenticationSucceeded(result);
+
+                                ASM_SignatureActivity signatureActivity = new ASM_SignatureActivity();
+                                byte[] signedChallenge = signatureActivity.signChallenge(snString, userID);
+
+                                if (signedChallenge != null) {
+                                    // Method invocation was successful
+                                    Log.d(TAG, "Signed Challenge: " + Base64.encodeToString(signedChallenge, Base64.NO_WRAP));
+
+                                } else {
+                                    // Method invocation failed
+                                    Log.e(TAG, "Failed to sign the challenge");
+                                }
+
+                                try {
+                                    verifySignature(signedChallenge, snString, userID); // userID에 실제 사용자의 ID를 전달해야 함
+                                } catch (KeyStoreException | CertificateException |
+                                         IOException | NoSuchAlgorithmException |
+                                         UnrecoverableEntryException |
+                                         KeyManagementException e) {
+                                    throw new RuntimeException(e);
+                                }
+
+                            }
+                        };
+                        if (checkBiometricSupport()) {
+                            BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(Buy2Activity.this)
+                                    .setTitle("지문 인증을 시작합니다")
+                                    .setSubtitle("지문 인증 시작")
+                                    .setDescription("지문")
+                                    .setNegativeButton("Cancel", getMainExecutor(), new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialogInterface, int i) {
+                                            notifyUser("Authentication Cancelled");
+                                        }
+                                    }).build();
+
+                            biometricPrompt.authenticate(getCancellationSignal(), getMainExecutor(), authenticationCallback);
+                        }
+
+                    } else {
+                        Log.e(TAG, "Header not found in JSON response");
+                    }
+                } catch (JSONException e) {
+                    Toast.makeText(getApplicationContext(), "오류가 발생하였습니다. ", Toast.LENGTH_SHORT).show();
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+
+        RP_BuyRequest buyRequest = null;
+        try {
+            buyRequest = new RP_BuyRequest(userID, "2", responseListener, Buy2Activity.this);
+        } catch (CertificateException | NoSuchAlgorithmException | KeyManagementException |
+                 IOException | KeyStoreException e) {
+            throw new RuntimeException(e);
+        }
+        RequestQueue queue = Volley.newRequestQueue(Buy2Activity.this);
+        queue.add(buyRequest);
+    }
+
+    private void showCardRegistrationDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(Buy2Activity.this);
+        builder.setTitle("카드 등록 요청");
+        builder.setMessage("카드를 등록해주세요.");
+
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
     }
 
     private void verifySignature(byte[] signString, String chall, String userID) throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException, UnrecoverableEntryException, KeyManagementException {
@@ -186,9 +229,10 @@ public class Buy2Activity extends AppCompatActivity {
 
                     if (success) {
                         // 검증 성공
-                        Toast.makeText(getApplicationContext(), "구매정보 저장되었습니다.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "구매가 완료되었습니다.", Toast.LENGTH_SHORT).show();
                         Intent successIntent = new Intent(Buy2Activity.this, BuySuccessActivity.class);
                         successIntent.putExtra("purchase_item", "toothbrush"); // 구매한 항목 정보 전달
+                        successIntent.putExtra("userID",userID);
                         startActivity(successIntent);
                         finish();
                     } else {
@@ -212,11 +256,10 @@ public class Buy2Activity extends AppCompatActivity {
 
                     if (success) {
                         // 검증 성공
-                        Toast.makeText(getApplicationContext(), "서명이 확인되었습니다.", Toast.LENGTH_SHORT).show();
-                        RP_SavePaymentRequest savePaymentRequest = new RP_SavePaymentRequest(userID, "toothbrush", "1000", responseListener2, Buy2Activity.this);
+                        RP_SavePaymentRequest savePaymentRequest = new RP_SavePaymentRequest(userID, "toothbrush", "1500", responseListener2, Buy2Activity.this);
                         RequestQueue queue2 = Volley.newRequestQueue(Buy2Activity.this);
                         queue2.add(savePaymentRequest);
-                    } else {
+                    } else if(success == false) {
                         // 검증 실패
                         Toast.makeText(getApplicationContext(), "서명이 유효하지 않습니다. ", Toast.LENGTH_SHORT).show();
                     }
