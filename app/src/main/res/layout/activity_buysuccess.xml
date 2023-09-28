@@ -18,7 +18,7 @@
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
+            android:layout_height="23dp"
             app:popupTheme="@style/AppTheme.PopupOverlay"
             app:theme="@style/AppTheme.Toolbar">
 
@@ -36,24 +36,26 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_marginLeft="16dp"
-            android:layout_marginTop="-64dp"
+            android:layout_marginTop="10dp"
             android:layout_marginRight="16dp"
+            android:layout_marginBottom="100dp"
             app:cardCornerRadius="8dp"
             app:cardElevation="4dp"
             app:cardUseCompatPadding="true"
             app:contentPadding="16dp">
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="328dp"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="128dp"
+                android:layout_marginTop="0dp"
+                android:layout_marginBottom="0dp"
                 android:gravity="center"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="64dp"
-                    android:layout_marginTop="36dp"
+                    android:layout_marginTop="80dp"
                     android:layout_marginBottom="24dp"
                     android:fontFamily="@font/calibri"
                     android:text="구매가 완료되었습니다!"
@@ -64,9 +66,10 @@
                 <ImageView
                     android:id="@+id/BuysuccessImageView"
                     android:layout_width="match_parent"
-                    android:layout_height="320dp"
-                    android:scaleType="centerCrop"/>
+                    android:layout_height="360dp"
+                    android:layout_marginBottom="50dp"
 
+                    android:scaleType="centerCrop" />
 
 
             </LinearLayout>

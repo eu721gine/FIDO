@@ -141,7 +141,6 @@ public class BiometricActivity extends AppCompatActivity {
                 Intent intent = getIntent();
                 String userID = intent.getStringExtra("userID");
                 super.onAuthenticationSucceeded(result);
-                notifyUser("인증에 성공하였습니다");
 
                 if (start_authenticationIsClicked) {
                     ASM_checkKeyPairExistence checkkp = new ASM_checkKeyPairExistence();
@@ -358,6 +357,7 @@ public class BiometricActivity extends AppCompatActivity {
                     JSONObject jsonObject = new JSONObject(response);
                     boolean success = jsonObject.getBoolean("success");
                     if (success) {
+                        Toast.makeText(getApplicationContext(), "생체정보가 등록되었습니다.", Toast.LENGTH_SHORT).show();
                         Log.d(TAG, "공개키 전송 성공");
                     } else {
                         Log.d(TAG, "공개키 전송 실패");
