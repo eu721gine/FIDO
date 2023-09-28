@@ -29,6 +29,11 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import android.content.Context;
+import android.content.res.Resources;
+import java.io.InputStream;
+import java.util.Scanner;
+
 public class CardEnrollActivity extends AppCompatActivity {
     private EditText et_card, et_cvc, et_date, et_pw;
     private Button btn_enroll;
@@ -74,7 +79,8 @@ public class CardEnrollActivity extends AppCompatActivity {
 
 
                 // AES 키 생성
-                String encryptionKey = generateAESKey();
+//                String encryptionKey = generateAESKey();
+                String encryptionKey = readRawResource(getApplicationContext(), R.raw.mykey);
 
                 // Encrypt the card information
                 String encryptedCardNumber = encrypt(c_num, encryptionKey);
@@ -151,18 +157,38 @@ public class CardEnrollActivity extends AppCompatActivity {
     }
 
     // Function to generate AES key
-    private String generateAESKey() {
+//    private String generateAESKey() {
+//        try {
+//            // AES 키 생성
+//            KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
+//            keyGenerator.init(256); // 256 비트 길이의 AES 키 생성
+//            SecretKey secretKey = keyGenerator.generateKey();
+//            return Base64.getEncoder().encodeToString(secretKey.getEncoded());
+//        } catch (NoSuchAlgorithmException e) {
+//            e.printStackTrace();
+//            return null;
+//        }
+//    }
+
+    public String readRawResource(Context context, int resourceId) {
         try {
-            // AES 키 생성
-            KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
-            keyGenerator.init(256); // 256 비트 길이의 AES 키 생성
-            SecretKey secretKey = keyGenerator.generateKey();
-            return Base64.getEncoder().encodeToString(secretKey.getEncoded());
-        } catch (NoSuchAlgorithmException e) {
+            Resources resources = context.getResources();
+            InputStream inputStream = resources.openRawResource(resourceId);
+            Scanner scanner = new Scanner(inputStream, "UTF-8");
+            StringBuilder stringBuilder = new StringBuilder();
+
+            while (scanner.hasNextLine()) {
+                stringBuilder.append(scanner.nextLine());
+            }
+
+            inputStream.close();
+            return stringBuilder.toString();
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
+
 
     // Function to encrypt using AES
     private String encrypt(String input, String key) {
