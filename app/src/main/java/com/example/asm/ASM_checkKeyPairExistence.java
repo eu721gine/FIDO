@@ -39,8 +39,8 @@ public class ASM_checkKeyPairExistence extends AppCompatActivity {
                 // 키 쌍이 존재하지 않음
                 Log.d(TAG, "Key pair not found");
 
-                ASM_generateKeyPair generatekeypair = new ASM_generateKeyPair();
-                generatekeypair.generateKeyPair(userID);
+//                ASM_generateKeyPair generatekeypair = new ASM_generateKeyPair();
+//                generatekeypair.generateKeyPair(userID);
                 return true;
                 // 생성하고 바로 보내기
 

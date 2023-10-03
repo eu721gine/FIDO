@@ -25,6 +25,7 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.Volley;
 import com.example.asm.ASM_SignatureActivity;
+import com.example.asm.ASM_checkKeyPairExistence;
 import com.example.duduhgee.R;
 import com.example.rp.RP_BuyRequest;
 import com.example.rp.RP_CheckCardRegistrationRequest;
@@ -67,39 +68,51 @@ public class Buy2Activity extends AppCompatActivity {
             public void onClick(View view) throws RuntimeException {
                 Intent intent = getIntent();
                 String userID = intent.getStringExtra("userID");
-                String p_id = "1";
+                String p_id = "2";
 
-                Response.Listener<String> responseListener = new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        try {
-                            JSONObject jsonObject = new JSONObject(response);
-                            boolean isCardRegistered = jsonObject.getBoolean("isCardRegistered");
+                ASM_checkKeyPairExistence checkkp = new ASM_checkKeyPairExistence();
+                boolean iskeyEX = checkkp.ASM_checkkeypairexistence(userID);
+                Log.d(TAG, "iskeyEX: "+iskeyEX);
+                if(!iskeyEX) {
+                    Response.Listener<String> responseListener = new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            try {
+                                JSONObject jsonObject = new JSONObject(response);
+                                boolean isCardRegistered = jsonObject.getBoolean("isCardRegistered");
 
-                            if (isCardRegistered) {
-                                // 카드 등록되어 있으면 물건 구매하기
-                                startPurchase(userID);
-                            } else {
-                                // 카드 등록이 되어있지 않으면 alert 창 띄우기
-                                showCardRegistrationDialog();
+                                if (isCardRegistered) {
+                                    // 카드 등록되어 있으면 물건 구매하기
+                                    startPurchase(userID);
+                                } else {
+                                    // 카드 등록이 되어있지 않으면 alert 창 띄우기
+                                    showCardRegistrationDialog();
+                                }
+                            } catch (JSONException e) {
+                                Toast.makeText(getApplicationContext(), "오류가 발생하였습니다. ", Toast.LENGTH_SHORT).show();
+                                throw new RuntimeException(e);
                             }
-                        } catch (JSONException e) {
-                            Toast.makeText(getApplicationContext(), "오류가 발생하였습니다. ", Toast.LENGTH_SHORT).show();
-                            throw new RuntimeException(e);
                         }
-                    }
-                };
+                    };
 
-                Response.ErrorListener errorListener = new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        // 오류 처리
-                    }
-                };
+                    Response.ErrorListener errorListener = new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            // 오류 처리
+                        }
+                    };
 
-                RP_CheckCardRegistrationRequest checkCardRequest = new RP_CheckCardRegistrationRequest(userID, responseListener, errorListener);
-                RequestQueue queue = Volley.newRequestQueue(Buy2Activity.this);
-                queue.add(checkCardRequest);
+                    RP_CheckCardRegistrationRequest checkCardRequest = new RP_CheckCardRegistrationRequest(userID, responseListener, errorListener);
+                    RequestQueue queue = Volley.newRequestQueue(Buy2Activity.this);
+                    queue.add(checkCardRequest);
+                }else{
+                    doesntExistBioDialog();
+                    //notifyUser("생체 인증 구매가 비활성화 되어 있습니다. 생체정보를 등록해주세요.");
+//                    intent = new Intent(Buy2Activity.this, BiometricActivity.class);
+//                    intent.putExtra("userID", userID);
+//                    startActivity(intent);
+                }
+
             }
         });
     }
@@ -144,6 +157,7 @@ public class Buy2Activity extends AppCompatActivity {
                             @Override
                             public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
                                 super.onAuthenticationSucceeded(result);
+                                notifyUser("인증에 성공하였습니다");
 
                                 ASM_SignatureActivity signatureActivity = new ASM_SignatureActivity();
                                 byte[] signedChallenge = signatureActivity.signChallenge(snString, userID);
@@ -212,6 +226,14 @@ public class Buy2Activity extends AppCompatActivity {
         AlertDialog alertDialog = builder.create();
         alertDialog.show();
     }
+    private void doesntExistBioDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(Buy2Activity.this);
+        builder.setTitle("생체 정보 등록 요청");
+        builder.setMessage("생체 정보를 등록해주세요.");
+
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
 
     private void verifySignature(byte[] signString, String chall, String userID) throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException, UnrecoverableEntryException, KeyManagementException {
         KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
@@ -229,10 +251,10 @@ public class Buy2Activity extends AppCompatActivity {
 
                     if (success) {
                         // 검증 성공
-                        Toast.makeText(getApplicationContext(), "구매가 완료되었습니다.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "구매정보 저장되었습니다.", Toast.LENGTH_SHORT).show();
                         Intent successIntent = new Intent(Buy2Activity.this, BuySuccessActivity.class);
                         successIntent.putExtra("purchase_item", "toothbrush"); // 구매한 항목 정보 전달
-                        successIntent.putExtra("userID",userID);
+                        successIntent.putExtra("userID", userID);
                         startActivity(successIntent);
                         finish();
                     } else {
@@ -256,10 +278,11 @@ public class Buy2Activity extends AppCompatActivity {
 
                     if (success) {
                         // 검증 성공
-                        RP_SavePaymentRequest savePaymentRequest = new RP_SavePaymentRequest(userID, "toothbrush", "1500", responseListener2, Buy2Activity.this);
+                        Toast.makeText(getApplicationContext(), "서명이 확인되었습니다.", Toast.LENGTH_SHORT).show();
+                        RP_SavePaymentRequest savePaymentRequest = new RP_SavePaymentRequest(userID, "toothbrush", "1000", responseListener2, Buy2Activity.this);
                         RequestQueue queue2 = Volley.newRequestQueue(Buy2Activity.this);
                         queue2.add(savePaymentRequest);
-                    } else if(success == false) {
+                    } else {
                         // 검증 실패
                         Toast.makeText(getApplicationContext(), "서명이 유효하지 않습니다. ", Toast.LENGTH_SHORT).show();
                     }

@@ -28,11 +28,10 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.Volley;
 import com.example.asm.ASM_SignatureActivity;
 import com.example.asm.ASM_checkKeyPairExistence;
+import com.example.asm.ASM_generateKeyPair;
 import com.example.rp.RP_DeleteAccountRequest;
 import com.example.rp.RP_DeleteRequest;
 import com.example.rp.RP_FIDORegisterRequest;
-import com.example.duduhgee.PayDetailActivity;
-import com.example.rp.RP_PaymentDetailRequest;
 import com.example.rp.RP_SavePKRequest;
 
 import org.json.JSONArray;
@@ -141,40 +140,58 @@ public class BiometricActivity extends AppCompatActivity {
                 Intent intent = getIntent();
                 String userID = intent.getStringExtra("userID");
                 super.onAuthenticationSucceeded(result);
+                //notifyUser("인증에 성공하였습니다");
 
                 if (start_authenticationIsClicked) {
                     ASM_checkKeyPairExistence checkkp = new ASM_checkKeyPairExistence();
                     boolean iskeyEX = checkkp.ASM_checkkeypairexistence(userID);
-
-                    ASM_SignatureActivity signatureActivity = new ASM_SignatureActivity();
-                    byte[] signedChallenge = signatureActivity.signChallenge(challenge, userID);
-
-                    if (signedChallenge != null) {
-                        // Method invocation was successful
-                        Log.d(TAG, "Signed Challenge: " + Base64.encodeToString(signedChallenge, Base64.NO_WRAP));
-                    } else {
-                        // Method invocation failed
-                        Log.e(TAG, "Failed to sign the challenge");
-                    }
-                    try {
-                        keyStore = KeyStore.getInstance("AndroidKeyStore");
-                        keyStore.load(null);
-                        KeyStore.PrivateKeyEntry privateKeyEntry = null;
-                        privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
-                        publicKey = privateKeyEntry.getCertificate().getPublicKey();
-                    } catch (KeyStoreException | CertificateException | IOException |
-                             NoSuchAlgorithmException | UnrecoverableEntryException e) {
-                        throw new RuntimeException(e);
-                    }
                     if(iskeyEX){
+                        ASM_generateKeyPair generatekeypair = new ASM_generateKeyPair();
+                        generatekeypair.generateKeyPair(userID);
+                        ASM_SignatureActivity signatureActivity = new ASM_SignatureActivity();
+                        byte[] signedChallenge = signatureActivity.signChallenge(challenge, userID);
+
+                        if (signedChallenge != null) {
+                            // Method invocation was successful
+                            Log.d(TAG, "Signed Challenge: " + Base64.encodeToString(signedChallenge, Base64.NO_WRAP));
+
+                        } else {
+                            // Method invocation failed
+                            Log.e(TAG, "Failed to sign the challenge");
+                        }
+
                         try {
-                            RP_sendpublickeytoserver(publicKey, signedChallenge, userID);
-                        } catch (CertificateException | IOException | KeyStoreException |
-                                 NoSuchAlgorithmException | KeyManagementException e) {
+                            keyStore = KeyStore.getInstance("AndroidKeyStore");
+                        } catch (KeyStoreException e) {
                             throw new RuntimeException(e);
                         }
-                    }
+                        try {
+                            keyStore.load(null);
+                        } catch (CertificateException | IOException | NoSuchAlgorithmException e) {
+                            throw new RuntimeException(e);
+                        }
+                        KeyStore.PrivateKeyEntry privateKeyEntry = null;
+                        try {
+                            privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(userID, null);
+                        } catch (KeyStoreException | NoSuchAlgorithmException |
+                                 UnrecoverableEntryException e) {
+                            throw new RuntimeException(e);
+                        }
+                        publicKey = privateKeyEntry.getCertificate().getPublicKey();
+                        if(iskeyEX){
+                            try {
 
+                                RP_sendpublickeytoserver(publicKey, signedChallenge, userID);
+
+                            } catch (CertificateException | IOException | KeyStoreException |
+                                     NoSuchAlgorithmException | KeyManagementException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+
+                    }else{
+                        notifyUser("이미 등록하셨습니다..^^");
+                    }
                 } else if (delete_bioIsClicked) {
                     try {
                         deletebio();
@@ -349,7 +366,10 @@ public class BiometricActivity extends AppCompatActivity {
 
 
     public void RP_sendpublickeytoserver(PublicKey publicKey, byte[] signedChallenge, String userID) throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+
+
         String publicKeyString = Base64.encodeToString(publicKey.getEncoded(), Base64.NO_WRAP);
+
         Response.Listener<String> responseListener = new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
@@ -357,8 +377,8 @@ public class BiometricActivity extends AppCompatActivity {
                     JSONObject jsonObject = new JSONObject(response);
                     boolean success = jsonObject.getBoolean("success");
                     if (success) {
-                        Toast.makeText(getApplicationContext(), "생체정보가 등록되었습니다.", Toast.LENGTH_SHORT).show();
                         Log.d(TAG, "공개키 전송 성공");
+                        notifyUser("공개키 전송 성공");
                     } else {
                         Log.d(TAG, "공개키 전송 실패");
                     }

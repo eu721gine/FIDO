@@ -26,7 +26,6 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.Volley;
 import com.example.asm.ASM_SignatureActivity;
 import com.example.asm.ASM_checkKeyPairExistence;
-import com.example.duduhgee.R;
 import com.example.rp.RP_BuyRequest;
 import com.example.rp.RP_CheckCardRegistrationRequest;
 import com.example.rp.RP_SavePaymentRequest;
@@ -69,44 +68,49 @@ public class BuyActivity extends AppCompatActivity {
                 String userID = intent.getStringExtra("userID");
                 String p_id = "1";
 
+                ASM_checkKeyPairExistence checkkp = new ASM_checkKeyPairExistence();
+                boolean iskeyEX = checkkp.ASM_checkkeypairexistence(userID);
+                Log.d(TAG, "iskeyEX: "+iskeyEX);
+                if(!iskeyEX){
+                    Response.Listener<String> responseListener = new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            try {
+                                JSONObject jsonObject = new JSONObject(response);
+                                boolean isCardRegistered = jsonObject.getBoolean("isCardRegistered");
 
-                Response.Listener<String> responseListener = new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        try {
-                            JSONObject jsonObject = new JSONObject(response);
-                            boolean isCardRegistered = jsonObject.getBoolean("isCardRegistered");
-
-                            if (isCardRegistered) {
-                                // 카드 등록되어 있으면 생체 정보 등록 여부 확인
-                                ASM_checkKeyPairExistence checkkp = new ASM_checkKeyPairExistence();
-                                boolean iskeyEX = checkkp.ASM_checkkeypairexistence(userID);
-                                if(iskeyEX){
+                                if (isCardRegistered) {
+                                    // 카드 등록되어 있으면
                                     startPurchase(userID);
-                                }else{
-                                    doesntExistBioDialog();
+                                } else {
+                                    // 카드 등록이 되어있지 않으면 alert 창 띄우기
+                                    showCardRegistrationDialog();
                                 }
-                            } else {
-                                // 카드 등록이 되어있지 않으면 alert 창 띄우기
-                                showCardRegistrationDialog();
+                            } catch (JSONException e) {
+                                Toast.makeText(getApplicationContext(), "오류가 발생하였습니다. ", Toast.LENGTH_SHORT).show();
+                                throw new RuntimeException(e);
                             }
-                        } catch (JSONException e) {
-                            Toast.makeText(getApplicationContext(), "오류가 발생하였습니다. ", Toast.LENGTH_SHORT).show();
-                            throw new RuntimeException(e);
                         }
-                    }
-                };
+                    };
 
-                Response.ErrorListener errorListener = new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        // 오류 처리
-                    }
-                };
+                    Response.ErrorListener errorListener = new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            // 오류 처리
+                        }
+                    };
 
-                RP_CheckCardRegistrationRequest checkCardRequest = new RP_CheckCardRegistrationRequest(userID, responseListener, errorListener);
-                RequestQueue queue = Volley.newRequestQueue(BuyActivity.this);
-                queue.add(checkCardRequest);
+                    RP_CheckCardRegistrationRequest checkCardRequest = new RP_CheckCardRegistrationRequest(userID, responseListener, errorListener);
+                    RequestQueue queue = Volley.newRequestQueue(BuyActivity.this);
+                    queue.add(checkCardRequest);
+                }else{
+                    doesntExistBioDialog();
+                    //notifyUser("생체 인증 구매가 비활성화 되어 있습니다. 생체정보를 등록해주세요.");
+//                    intent = new Intent(BuyActivity.this, BiometricActivity.class);
+//                    intent.putExtra("userID", userID);
+//                    startActivity(intent);
+                }
+
             }
         });
     }
@@ -119,13 +123,11 @@ public class BuyActivity extends AppCompatActivity {
                     JSONObject jsonObject = new JSONObject(response);
 
                     if (jsonObject.has("Challenge")) {
-                        String header = jsonObject.getString("Header");
                         String username = jsonObject.getString("Username");
                         String challenge = jsonObject.getString("Challenge");
                         String policy = jsonObject.getString("Policy");
                         String transaction = jsonObject.getString("Transaction");
 
-                        Log.d(TAG,"Header: "+header);
                         Log.d(TAG,"Username: "+username);
                         Log.d(TAG,"Challenge: "+challenge);
                         Log.d(TAG,"Policy: "+policy);
