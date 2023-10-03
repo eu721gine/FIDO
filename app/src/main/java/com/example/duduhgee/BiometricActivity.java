@@ -180,15 +180,12 @@ public class BiometricActivity extends AppCompatActivity {
                         publicKey = privateKeyEntry.getCertificate().getPublicKey();
                         if(iskeyEX){
                             try {
-
                                 RP_sendpublickeytoserver(publicKey, signedChallenge, userID);
-
                             } catch (CertificateException | IOException | KeyStoreException |
                                      NoSuchAlgorithmException | KeyManagementException e) {
                                 throw new RuntimeException(e);
                             }
                         }
-
                     }else{
                         notifyUser("이미 등록하셨습니다..^^");
                     }
@@ -201,9 +198,43 @@ public class BiometricActivity extends AppCompatActivity {
                     }
                 } else if (delete_AcIsClicked) {
                     try {
-                        deleteAc();
-                    } catch (KeyStoreException | CertificateException | IOException |
-                             NoSuchAlgorithmException e) {
+                        //deleteAc();
+                        keyStore.deleteEntry(userID);
+                        Response.Listener<String> responseListener = new Response.Listener<String>() {
+                            @Override
+                            public void onResponse(String response) {
+                                try {
+                                    JSONObject jsonObject = new JSONObject(response);
+                                    boolean success = jsonObject.getBoolean("success");
+
+                                    if (success) {
+                                        Toast.makeText(getApplicationContext(), "회원 탈퇴가 완료되었습니다.", Toast.LENGTH_SHORT).show();
+
+                                        // 회원 탈퇴 성공 시 로그인 페이지로 이동
+                                        Intent loginIntent = new Intent(BiometricActivity.this, LoginActivity.class);
+                                        startActivity(loginIntent);
+                                        finish();  // 현재 화면 종료
+                                    } else {
+                                        Toast.makeText(getApplicationContext(), "탈퇴 실패하였습니다.", Toast.LENGTH_SHORT).show();
+                                    }
+                                } catch (JSONException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                        };
+
+                        Response.ErrorListener errorListenerDeleteAc = new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                Log.e(TAG, "계정 삭제 에러: " + error.getMessage());
+                            }
+                        };
+
+                        // 여기서 삭제 요청을 서버에 전달하는 코드를 추가하면 됩니다.
+                        RP_DeleteAccountRequest.deleteAccount(userID, BiometricActivity.this, responseListener, errorListenerDeleteAc);
+
+                        Log.d(TAG, "키스토어에서 삭제됨");
+                    } catch (KeyStoreException e) {
                         throw new RuntimeException(e);
                     }
                 }
@@ -225,10 +256,12 @@ public class BiometricActivity extends AppCompatActivity {
                     public void onResponse(String response) {
                         try {
                             JSONObject jsonObject = new JSONObject(response);
+                            //String header = jsonObject.getString("Header");
                             String username = jsonObject.getString("Username");
                             challenge = jsonObject.getString("Challenge");
                             String policy = jsonObject.getString("Policy");
 
+                            //Log.d(TAG,"Header: "+header);
                             Log.d(TAG,"Username: "+username);
                             Log.d(TAG,"Challenge: "+challenge);
                             Log.d(TAG,"Policy: "+policy);
@@ -317,22 +350,18 @@ public class BiometricActivity extends AppCompatActivity {
 
                 delete_AcIsClicked = true;
                 start_authenticationIsClicked = false;
-
-                if (checkBiometricSupport()) {
-                    BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(BiometricActivity.this)
-                            .setTitle("지문 인증을 시작합니다")
-                            .setSubtitle("지문 인증 시작")
-                            .setDescription("지문")
-                            .setNegativeButton("Cancel", getMainExecutor(), new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    notifyUser("Authentication Cancelled");
-                                }
-                            }).build();
-
-                    biometricPrompt.authenticate(getCancellationSignal(), getMainExecutor(), authenticationCallback);
-
+                try {
+                    deleteAc();
+                } catch (KeyStoreException e) {
+                    throw new RuntimeException(e);
+                } catch (CertificateException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                } catch (NoSuchAlgorithmException e) {
+                    throw new RuntimeException(e);
                 }
+
             }
         });
 
@@ -482,46 +511,27 @@ public class BiometricActivity extends AppCompatActivity {
 
         if (keyStore.containsAlias(userID)) {
             Log.d(TAG, "키스토어에 있습니다.");
-            keyStore.deleteEntry(userID);
-            Response.Listener<String> responseListener = new Response.Listener<String>() {
-                @Override
-                public void onResponse(String response) {
-                    try {
-                        JSONObject jsonObject = new JSONObject(response);
-                        boolean success = jsonObject.getBoolean("success");
+            if (checkBiometricSupport()) {
+                BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(BiometricActivity.this)
+                        .setTitle("지문 인증을 시작합니다")
+                        .setSubtitle("지문 인증 시작")
+                        .setDescription("지문")
+                        .setNegativeButton("Cancel", getMainExecutor(), new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                notifyUser("Authentication Cancelled");
+                            }
+                        }).build();
 
-                        if (success) {
-                            Toast.makeText(getApplicationContext(), "회원 탈퇴가 완료되었습니다.", Toast.LENGTH_SHORT).show();
+                biometricPrompt.authenticate(getCancellationSignal(), getMainExecutor(), authenticationCallback);
 
-                            // 회원 탈퇴 성공 시 로그인 페이지로 이동
-                            Intent loginIntent = new Intent(BiometricActivity.this, LoginActivity.class);
-                            startActivity(loginIntent);
-                            finish();  // 현재 화면 종료
-                        } else {
-                            Toast.makeText(getApplicationContext(), "탈퇴 실패하였습니다.", Toast.LENGTH_SHORT).show();
-                        }
-                    } catch (JSONException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            };
-
-            Response.ErrorListener errorListenerDeleteAc = new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    Log.e(TAG, "계정 삭제 에러: " + error.getMessage());
-                }
-            };
-
-            // 여기서 삭제 요청을 서버에 전달하는 코드를 추가하면 됩니다.
-            RP_DeleteAccountRequest.deleteAccount(userID, BiometricActivity.this, responseListener, errorListenerDeleteAc);
-
-            Log.d(TAG, "키스토어에서 삭제됨");
+            }
         } else {
             Log.d(TAG, "키스토어에 없습니다.");
             // 키스토어에 키가 없는 경우 메시지를 띄웁니다.
             notifyUser("생체 정보를 다시 등록해주세요");
         }
     }
+
 
 }
