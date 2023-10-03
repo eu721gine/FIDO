@@ -378,7 +378,7 @@ public class BiometricActivity extends AppCompatActivity {
                     boolean success = jsonObject.getBoolean("success");
                     if (success) {
                         Log.d(TAG, "공개키 전송 성공");
-                        notifyUser("공개키 전송 성공");
+                        notifyUser("생체 인증 서비스를 이용할 수 있습니다.");
                     } else {
                         Log.d(TAG, "공개키 전송 실패");
                     }
@@ -500,8 +500,6 @@ public class BiometricActivity extends AppCompatActivity {
                         } else {
                             Toast.makeText(getApplicationContext(), "탈퇴 실패하였습니다.", Toast.LENGTH_SHORT).show();
                         }
-
-
                     } catch (JSONException e) {
                         throw new RuntimeException(e);
                     }
@@ -518,13 +516,11 @@ public class BiometricActivity extends AppCompatActivity {
             // 여기서 삭제 요청을 서버에 전달하는 코드를 추가하면 됩니다.
             RP_DeleteAccountRequest.deleteAccount(userID, BiometricActivity.this, responseListener, errorListenerDeleteAc);
 
-            if (keyStore.containsAlias(userID)) {
-                Log.d(TAG, "키스토어에서 삭제 실패");
-            } else {
-                Log.d(TAG, "키스토어에서 삭제됨");
-            }
+            Log.d(TAG, "키스토어에서 삭제됨");
         } else {
-            Log.d(TAG, "키스토어에 없습니다. ");
+            Log.d(TAG, "키스토어에 없습니다.");
+            // 키스토어에 키가 없는 경우 메시지를 띄웁니다.
+            notifyUser("생체 정보를 다시 등록해주세요");
         }
     }
 

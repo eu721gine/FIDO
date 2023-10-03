@@ -155,7 +155,6 @@ public class BuyActivity extends AppCompatActivity {
                             @Override
                             public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
                                 super.onAuthenticationSucceeded(result);
-                                notifyUser("인증에 성공하였습니다");
 
                                 ASM_SignatureActivity signatureActivity = new ASM_SignatureActivity();
                                 byte[] signedChallenge = signatureActivity.signChallenge(snString, userID);
@@ -248,20 +247,18 @@ public class BuyActivity extends AppCompatActivity {
                     boolean success = jsonObject.getBoolean("success");
 
                     if (success) {
-                        // 검증 성공
-                        Toast.makeText(getApplicationContext(), "구매정보 저장되었습니다.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "구매가 완료되었습니다.", Toast.LENGTH_SHORT).show();
                         Intent successIntent = new Intent(BuyActivity.this, BuySuccessActivity.class);
                         successIntent.putExtra("purchase_item", "tissue"); // 구매한 항목 정보 전달
                         successIntent.putExtra("userID", userID);
                         startActivity(successIntent);
                         finish();
                     } else {
-                        // 검증 실패
-                        Toast.makeText(getApplicationContext(), "구매정보 저장 실패. ", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "#02. 다시 시도해 주십시오.", Toast.LENGTH_SHORT).show();
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
-                    Toast.makeText(getApplicationContext(), "구매정보 저장 오류.", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "구매정보 저장 오류");
                 }
             }
         };
@@ -273,20 +270,20 @@ public class BuyActivity extends AppCompatActivity {
                 try {
                     JSONObject jsonObject = new JSONObject(response);
                     boolean success = jsonObject.getBoolean("purchased");
+//                    String success = jsonObject.getString("purchased");
 
                     if (success) {
                         // 검증 성공
-                        Toast.makeText(getApplicationContext(), "서명이 확인되었습니다.", Toast.LENGTH_SHORT).show();
                         RP_SavePaymentRequest savePaymentRequest = new RP_SavePaymentRequest(userID, "tissue", "1500", responseListener2, BuyActivity.this);
                         RequestQueue queue2 = Volley.newRequestQueue(BuyActivity.this);
                         queue2.add(savePaymentRequest);
-                    } else {
+                    } else if(success==false) {
                         // 검증 실패
-                        Toast.makeText(getApplicationContext(), "서명이 유효하지 않습니다. ", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "#01. 다시 시도해 주십시오.", Toast.LENGTH_SHORT).show();
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
-                    Toast.makeText(getApplicationContext(), "서명 검증 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "서명 검증 중 오류가 발생했습니다.");
                 } catch (CertificateException | IOException | KeyStoreException |
                          NoSuchAlgorithmException | KeyManagementException e) {
                     throw new RuntimeException(e);

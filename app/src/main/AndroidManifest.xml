@@ -50,7 +50,7 @@
             android:name="com.example.duduhgee.BuySuccessActivity"
             android:exported="false"/>
         <activity
-            android:name="com.example.rp.RP_PayDetailActivity"
+            android:name="com.example.duduhgee.PayDetailActivity"
             android:exported="false"/>
     </application>
 
